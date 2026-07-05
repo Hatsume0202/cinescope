@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineScope - 电影字幕分析工具</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CineScope</h1>
+            <p class="subtitle">电影字幕深度分析工具 | 2026暑期档特别版</p>
+        </header>
+        
+        <section class="upload-section">
+            <div class="upload-box" id="dropZone">
+                <p>拖拽 .srt 字幕文件到此处，或点击上传</p>
+                <input type="file" id="fileInput" accept=".srt" hidden>
+                <button onclick="document.getElementById('fileInput').click()">选择字幕文件</button>
+            </div>
+        </section>
+        
+        <section class="demo-section">
+            <h2>没有字幕文件？试试示例数据</h2>
+            <button id="loadDemo" class="btn-primary">加载《给阿嬷的情书》模拟数据</button>
+        </section>
+        
+        <section id="results" class="results-section hidden">
+            <h2>分析结果</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>总台词数</h3>
+                    <p id="totalLines">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>角色数量</h3>
+                    <p id="charCount">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>影片时长</h3>
+                    <p id="duration">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>平均情感得分</h3>
+                    <p id="avgSentiment">0</p>
+                </div>
+            </div>
+            
+            <div class="chart-grid">
+                <div class="chart-container">
+                    <h3>角色台词量统计</h3>
+                    <canvas id="charChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>情感曲线时间线</h3>
+                    <canvas id="sentimentChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>场景切换频率</h3>
+                    <canvas id="sceneChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>高频词汇 TOP15</h3>
+                    <canvas id="wordChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="export-section">
+                <button id="exportBtn" class="btn-primary">导出分析报告 (JSON)</button>
+            </div>
+        </section>
+        
+        <footer>
+            <p>CineScope 开源项目 | <a href="https://github.com/Hatsume0202/cinescope" target="_blank">GitHub 仓库</a></p>
+            <p class="context">灵感来源：2026暑期档近80部影片上映，票房突破20亿元</p>
+        </footer>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
