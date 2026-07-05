@@ -4,82 +4,249 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CineScope - 电影字幕分析工具</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="description" content="CineScope 是一款纯前端电影字幕分析工具，上传 SRT 字幕即可自动生成角色台词量、情感曲线、词云、场景切换频率等可视化图表。">
+
+    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>CineScope</h1>
-            <p class="subtitle">电影字幕深度分析工具 | 2026暑期档特别版</p>
-        </header>
-        
-        <section class="upload-section">
-            <div class="upload-box" id="dropZone">
-                <p>拖拽 .srt 字幕文件到此处，或点击上传</p>
-                <input type="file" id="fileInput" accept=".srt" hidden>
-                <button onclick="document.getElementById('fileInput').click()">选择字幕文件</button>
-            </div>
-        </section>
-        
-        <section class="demo-section">
-            <h2>没有字幕文件？试试示例数据</h2>
-            <button id="loadDemo" class="btn-primary">加载《给阿嬷的情书》模拟数据</button>
-        </section>
-        
-        <section id="results" class="results-section hidden">
-            <h2>分析结果</h2>
-            
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>总台词数</h3>
-                    <p id="totalLines">0</p>
-                </div>
-                <div class="stat-card">
-                    <h3>角色数量</h3>
-                    <p id="charCount">0</p>
-                </div>
-                <div class="stat-card">
-                    <h3>影片时长</h3>
-                    <p id="duration">0</p>
-                </div>
-                <div class="stat-card">
-                    <h3>平均情感得分</h3>
-                    <p id="avgSentiment">0</p>
-                </div>
-            </div>
-            
-            <div class="chart-grid">
-                <div class="chart-container">
-                    <h3>角色台词量统计</h3>
-                    <canvas id="charChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <h3>情感曲线时间线</h3>
-                    <canvas id="sentimentChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <h3>场景切换频率</h3>
-                    <canvas id="sceneChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <h3>高频词汇 TOP15</h3>
-                    <canvas id="wordChart"></canvas>
-                </div>
-            </div>
-            
-            <div class="export-section">
-                <button id="exportBtn" class="btn-primary">导出分析报告 (JSON)</button>
-            </div>
-        </section>
-        
-        <footer>
-            <p>CineScope 开源项目 | <a href="https://github.com/Hatsume0202/cinescope" target="_blank">GitHub 仓库</a></p>
-            <p class="context">灵感来源：2026暑期档近80部影片上映，票房突破20亿元</p>
-        </footer>
+
+    <!-- ================================================================ -->
+    <!-- Loading Overlay -->
+    <!-- ================================================================ -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">正在分析字幕，请稍候...</div>
     </div>
-    
-    <script src="app.js"></script>
+
+    <!-- ================================================================ -->
+    <!-- Toast Notification -->
+    <!-- ================================================================ -->
+    <div class="toast" id="toast"></div>
+
+    <!-- ================================================================ -->
+    <!-- Header -->
+    <!-- ================================================================ -->
+    <header class="header">
+        <div class="container">
+            <div class="header-title">
+                <span class="logo">🎬</span>
+                <h1>Cine<span>Scope</span></h1>
+            </div>
+            <p class="header-sub">电影字幕分析工具 · 上传 SRT 生成可视化报告</p>
+        </div>
+    </header>
+
+    <!-- ================================================================ -->
+    <!-- Main Content -->
+    <!-- ================================================================ -->
+    <main class="container">
+
+        <!-- Upload Zone -->
+        <section class="upload-zone" id="uploadZone">
+            <div id="uploadPrompt">
+                <span class="upload-icon">📂</span>
+                <h3>拖拽字幕文件到此处</h3>
+                <p>或点击 <span class="browse-link">浏览文件</span> 选择 .srt 文件</p>
+            </div>
+
+            <div class="file-info" id="fileInfo" style="display: none;">
+                <span>📄</span>
+                <span class="file-name" id="fileName"></span>
+                <span class="file-size" id="fileSize"></span>
+            </div>
+
+            <div class="upload-actions">
+                <button class="btn btn-primary" id="btnAnalyze" disabled>
+                    🔍 分析字幕
+                </button>
+                <button class="btn btn-secondary" id="btnSample">
+                    🎬 加载示例数据
+                </button>
+                <button class="btn" id="btnReset">
+                    🔄 重置
+                </button>
+            </div>
+
+            <input type="file" id="fileInput" accept=".srt,.txt,text/plain">
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- Analysis Section (hidden until analysis runs) -->
+        <!-- ============================================================ -->
+        <section class="analysis-section" id="analysisSection">
+
+            <!-- Stats Overview -->
+            <div class="section-header">
+                <h2><span class="icon">📊</span> 分析概览</h2>
+                <span class="section-badge">分析报告</span>
+            </div>
+
+            <div class="stats-overview">
+                <div class="stat-card dialogue">
+                    <div class="stat-value" id="statEntries">0</div>
+                    <div class="stat-label">字幕条数</div>
+                </div>
+                <div class="stat-card words">
+                    <div class="stat-value" id="statWords">0</div>
+                    <div class="stat-label">总字数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statSpeakers">0</div>
+                    <div class="stat-label">角色数</div>
+                </div>
+                <div class="stat-card scenes">
+                    <div class="stat-value" id="statScenes">0</div>
+                    <div class="stat-label">场景数</div>
+                </div>
+                <div class="stat-card sentiment">
+                    <div class="stat-value" id="statSentiment">中立</div>
+                    <div class="stat-label">整体情感</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statDuration">0m 00s</div>
+                    <div class="stat-label">预估时长</div>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- Chart Group 1: Character Dialogue -->
+            <!-- ======================================================== -->
+            <div class="section-header" style="margin-top: var(--space-xl);">
+                <h2><span class="icon">🎭</span> 角色台词分析</h2>
+                <span class="section-badge">Bar + Pie</span>
+            </div>
+
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <div class="chart-card-title">
+                            <span class="emoji">📊</span> 角色台词量
+                        </div>
+                        <div class="chart-card-subtitle">台词条数分布</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="dialogueBarChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <div class="chart-card-title">
+                            <span class="emoji">🥧</span> 角色占比
+                        </div>
+                        <div class="chart-card-subtitle">台词比例分布</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="dialoguePieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- Chart Group 2: Emotion -->
+            <!-- ======================================================== -->
+            <div class="section-header" style="margin-top: var(--space-xl);">
+                <h2><span class="icon">💗</span> 情感分析</h2>
+                <span class="section-badge">Line + Area</span>
+            </div>
+
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <div class="chart-card-title">
+                            <span class="emoji">📈</span> 情感曲线
+                        </div>
+                        <div class="chart-card-subtitle">正面 → 负面 趋势</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="emotionLineChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <div class="chart-card-title">
+                            <span class="emoji">🗻</span> 情感堆叠
+                        </div>
+                        <div class="chart-card-subtitle">正 / 中 / 负 分布</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="emotionAreaChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- Chart Group 3: Word Cloud -->
+            <!-- ======================================================== -->
+            <div class="section-header" style="margin-top: var(--space-xl);">
+                <h2><span class="icon">☁️</span> 词云</h2>
+                <span class="section-badge">Canvas</span>
+            </div>
+
+            <div class="chart-grid">
+                <div class="chart-card full-width">
+                    <div class="chart-card-header">
+                        <div class="chart-card-title">
+                            <span class="emoji">🔤</span> 高频词云
+                        </div>
+                        <div class="chart-card-subtitle">出现频率最高的词汇</div>
+                    </div>
+                    <div class="chart-container word-cloud">
+                        <canvas id="wordCloudCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- Chart Group 4: Scene Changes -->
+            <!-- ======================================================== -->
+            <div class="section-header" style="margin-top: var(--space-xl);">
+                <h2><span class="icon">🎬</span> 场景分析</h2>
+                <span class="section-badge">Bar</span>
+            </div>
+
+            <div class="chart-grid">
+                <div class="chart-card full-width">
+                    <div class="chart-card-header">
+                        <div class="chart-card-title">
+                            <span class="emoji">🔄</span> 场景切换频率
+                        </div>
+                        <div class="chart-card-subtitle">每个场景的台词密度和时长</div>
+                    </div>
+                    <div class="chart-container" style="min-height: 320px;">
+                        <canvas id="sceneChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- ================================================================ -->
+    <!-- Footer -->
+    <!-- ================================================================ -->
+    <footer style="
+        text-align: center;
+        padding: var(--space-2xl) var(--space-lg);
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        border-top: 1px solid var(--border);
+        margin-top: var(--space-2xl);
+    ">
+        <p>CineScope · 纯前端字幕分析工具 · 数据不上传服务器</p>
+        <p style="margin-top: 4px;">基于 Chart.js · 暗色电影主题</p>
+    </footer>
+
+    <!-- ================================================================ -->
+    <!-- Scripts (order matters) -->
+    <!-- ================================================================ -->
+    <script src="js/parser.js"></script>
+    <script src="js/analyzer.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/app.js"></script>
+
 </body>
 </html>
